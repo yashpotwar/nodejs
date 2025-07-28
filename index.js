@@ -53,10 +53,6 @@ app.use('/api/products', reviewRoutes);
 app.use('/api/orders', orderRoutes);
 // app.use('/api', orderRoutes);
 
-// ✅ Start server
-
-
-
 
 
 // Serve React static files (production build)
@@ -64,9 +60,10 @@ app.use(express.static(path.join(__dirname, 'client/build')));
 
 // Catch-all route for React frontend
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname,  'client/build/index.html'));
+  res.sendFile(path.join(__dirname,  'client/build', 'index.html'));
 });
 
+// ✅ Start server
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
