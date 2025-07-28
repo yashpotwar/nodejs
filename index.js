@@ -1,5 +1,6 @@
 require('dotenv').config();
 
+const path = require('path'); // ✅ Add this at the top
 const express = require('express');
 const session = require('express-session');
 const cors = require('cors');
@@ -12,7 +13,6 @@ const cartRoutes = require('./routes/cart.routes');
 const categoryRoutes = require('./routes/category.routes'); // 👈 Add this
 const subCategoryRoutes = require('./routes/subCategoryRoutes');
 const deletedLogsRoutes = require('./routes/deletedLogsRoutes');
-const path = require('path'); // ✅ Add this at the top
 const reviewRoutes = require('./routes/reviewRoutes');
 const orderRoutes = require('./routes/order.routes');
 const app = express();
@@ -20,7 +20,7 @@ const PORT = 5000;
 
 // ✅ Proper CORS Setup for frontend at localhost:3000
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: 'https://ycart.coreedgetechnology.com',
   credentials: true // VERY IMPORTANT: allows cookies/sessions to be sent
 }));
 
@@ -38,6 +38,14 @@ app.use(session({
   }
 }));
 
+// // Serve React static files (production build)
+// app.use(express.static(path.join(__dirname, 'client', 'build')));
+
+// // Catch-all route for React frontend
+// app.get('*', (req, res) => {
+//   res.sendFile(path.join(__dirname, 'client', 'build', 'index.html'));
+// });
+
 // ✅ Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
@@ -54,17 +62,8 @@ app.use('/api/orders', orderRoutes);
 // app.use('/api', orderRoutes);
 
 // ✅ Start server
+
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
-});
-
-
-
-
-// Serve React static files (production build)
-app.use(express.static(path.join(__dirname, 'client', 'build')));
-
-// Catch-all route for React frontend
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'client', 'build', 'index.html'));
 });
