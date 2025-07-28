@@ -20,7 +20,7 @@ const PORT = 5000;
 
 // ✅ Proper CORS Setup for frontend at localhost:3000
 app.use(cors({
-  origin: 'https://ycart.coreedgetechnology.com',
+  origin: 'https://ycart.coreedgetechnology.com/',
   credentials: true // VERY IMPORTANT: allows cookies/sessions to be sent
 }));
 
@@ -53,17 +53,18 @@ app.use('/api/products', reviewRoutes);
 app.use('/api/orders', orderRoutes);
 // app.use('/api', orderRoutes);
 
+// ✅ Start server
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
+
+
 
 
 // Serve React static files (production build)
-app.use(express.static(path.join(__dirname, 'client/build')));
+app.use(express.static(path.join(__dirname, 'client-user', 'build')));
 
 // Catch-all route for React frontend
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname,  'client/build', 'index.html'));
-});
-
-// ✅ Start server
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  res.sendFile(path.join(__dirname, 'client-user', 'build', 'index.html'));
 });
