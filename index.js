@@ -20,7 +20,7 @@ const PORT = 5000;
 
 // ✅ Proper CORS Setup for frontend at localhost:3000
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: 'https://ycart.coreedgetechnology.com',
   credentials: true // VERY IMPORTANT: allows cookies/sessions to be sent
 }));
 
