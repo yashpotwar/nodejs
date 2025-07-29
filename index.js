@@ -32,7 +32,7 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    secure: false, // ⚠️ If using HTTPS, set this to true
+    secure: false, // ⚠️ If using HTTPS,set this to true
     sameSite: 'lax'
   }
 }));
