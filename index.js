@@ -9,9 +9,21 @@ const app = express();
 
 
 // ✅ Middlewares
+// app.use(cors({
+//   origin: 'https://ycart.coreedgetechnology.com',
+//   credentials: true
+// }));
+const allowedOrigins = ['https://ycart.coreedgetechnology.com', 'http://localhost:3000'];
+
 app.use(cors({
-  origin: 'https://ycart.coreedgetechnology.com',
-  credentials: true
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
 }));
 app.use(bodyParser.json());
 app.use(session({
