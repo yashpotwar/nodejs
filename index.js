@@ -52,7 +52,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/dashboard-metrics', dashboardRoutes);
 app.use('/api/cart', cartRoutes);
-app.use('/api/categories', categoryRoutes); // 👈 Add this line
+app.use('/api/categories', categoryRoutes); 
 app.use('/uploads', express.static('uploads'));
 app.use('/api/subcategories', subCategoryRoutes);
 app.use('/api/deleted-logs', deletedLogsRoutes);
