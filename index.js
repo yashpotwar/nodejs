@@ -38,13 +38,13 @@ app.use(session({
   }
 }));
 
-// // Serve React static files (production build)
-// app.use(express.static(path.join(__dirname, 'client', 'build')));
+// Serve React static files (production build)
+ app.use(express.static(path.join(__dirname, 'client', 'build')));
 
-// // Catch-all route for React frontend
-// app.get('*', (req, res) => {
-//   res.sendFile(path.join(__dirname, 'client', 'build', 'index.html'));
-// });
+ // Catch-all route for React frontend
+  app.get('*', (req, res) => {
+   res.sendFile(path.join(__dirname, 'client', 'build', 'index.html'));
+  });
 
 // ✅ Routes
 app.use('/api/auth', authRoutes);
