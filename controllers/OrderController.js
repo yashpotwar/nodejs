@@ -1,98 +1,74 @@
-const { sql, pool, poolConnect } = require('../config/db');
+const sql = require("mssql");
+const dbConfig = require("../config/db");
 
-const placeOrder = async (req, res) => {
-  const { userId, address, items, totalAmount } = req.body;
-   let transaction; 
+exports.placeOrder = async (req, res) => {
+  const { userId, addressId, items, paymentMethod, totalAmount } = req.body;
+
+  if (!userId || !addressId || !items || !items.length) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  const pool = await sql.connect(dbConfig);
+  const transaction = new sql.Transaction(pool);
 
   try {
-    await poolConnect;
-    transaction = new sql.Transaction(pool);
     await transaction.begin();
 
-    const orderRequest = new sql.Request(transaction);
-    const orderResult = await orderRequest
-      .input('userId', sql.Int, userId)
-      .input('address', sql.NVarChar(sql.MAX), address)
-      .input('totalAmount', sql.Decimal(10, 2), totalAmount)
-      .input('status', sql.NVarChar(50), 'Placed')
+    const orderInsert = await transaction.request()
+      .input("UserID", sql.Int, userId)
+      .input("AddressID", sql.Int, addressId)
+      .input("PaymentMethod", sql.VarChar, paymentMethod || "COD")
+      .input("TotalAmount", sql.Decimal(10, 2), totalAmount)
       .query(`
-        INSERT INTO Orders (UserID, OrderDate, TotalAmount, DeliveryAddress, Status)
+        INSERT INTO Orders (UserID, AddressID, PaymentMethod, TotalAmount, OrderDate)
         OUTPUT INSERTED.ID
-        VALUES (@userId, GETDATE(), @totalAmount, @address, @status)
+        VALUES (@UserID, @AddressID, @PaymentMethod, @TotalAmount, GETDATE())
       `);
 
-    const orderId = orderResult.recordset[0].ID;
+    const orderId = orderInsert.recordset[0].ID;
 
     for (const item of items) {
-      await new sql.Request(transaction)
-        .input('orderId', sql.Int, orderId)
-        .input('productId', sql.Int, item.productId)
-        .input('variantId', sql.Int, item.variantId)
-        .input('quantity', sql.Int, item.quantity)
-        .input('size', sql.NVarChar(50), item.size)
-        .input('color', sql.NVarChar(50), item.color)
-        .input('price', sql.Decimal(10, 2), item.price)
+      await transaction.request()
+        .input("OrderID", sql.Int, orderId)
+        .input("ProductID", sql.Int, item.productId)
+        .input("VariantID", sql.Int, item.variantId)
+        .input("Quantity", sql.Int, item.quantity)
+        .input("Price", sql.Decimal(10, 2), item.price)
+        .input("Size", sql.VarChar, item.size)
+        .input("Color", sql.VarChar, item.color)
         .query(`
-          INSERT INTO OrderItems (OrderID, ProductID, VariantID, Quantity, Size, Color, Price)
-          VALUES (@orderId, @productId, @variantId, @quantity, @size, @color, @price)
+          INSERT INTO OrderItems (OrderID, ProductID, VariantID, Quantity, Price, Size, Color)
+          VALUES (@OrderID, @ProductID, @VariantID, @Quantity, @Price, @Size, @Color)
         `);
     }
 
-    // Clear cart for this user
-    await new sql.Request(transaction)
-      .input('userId', sql.Int, userId)
-      .query(`DELETE FROM Cart WHERE UserID = @userId`);
+    // Clear cart
+    await transaction.request()
+      .input("UserID", sql.Int, userId)
+      .query("DELETE FROM Cart WHERE UserID = @UserID");
 
     await transaction.commit();
-    res.status(200).json({ success: true, message: 'Order placed successfully', orderId });
-
-  } catch (err) {
-    console.error('❌ Order placement failed:', err);
-
-    try {
-      if (transaction) await transaction.rollback(); // rollback on failure
-    } catch (rollbackErr) {
-      console.error('Rollback failed:', rollbackErr);
-    }
-
-    res.status(500).json({ error: 'Order placement failed' });
+    res.status(200).json({ message: "Order placed successfully", orderId });
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Order Placement Error:", error);
+    res.status(500).json({ error: "Something went wrong" });
   }
-};
-
-// In OrderController.js
-const getOrderById = async (req, res) => {
-  const { id } = req.params;
-
+  exports.getOrderById = async (req, res) => {
+  const orderId = req.params.id;
   try {
-    await poolConnect;
-    const orderRequest = new sql.Request(pool);
-    const order = await orderRequest
-      .input('id', sql.Int, id)
+    const pool = await sql.connect(dbConfig);
+    const result = await pool.request()
+      .input("OrderID", sql.Int, orderId)
       .query(`
-        SELECT * FROM Orders WHERE ID = @id
+        SELECT * FROM Orders WHERE ID = @OrderID
       `);
-
-    const itemsRequest = new sql.Request(pool);
-    const items = await itemsRequest
-      .input('id', sql.Int, id)
-      .query(`
-        SELECT OI.*, P.Name as ProductName, PV.ImagePath
-        FROM OrderItems OI
-        JOIN Products P ON OI.ProductID = P.ID
-        JOIN ProductVariants PV ON OI.VariantID = PV.ID
-        WHERE OI.OrderID = @id
-      `);
-
-    res.json({ ...order.recordset[0], Items: items.recordset });
-  } catch (err) {
-    console.error('Fetch order error:', err);
-    res.status(500).json({ error: 'Failed to fetch order' });
+    
+    res.status(200).json(result.recordset[0]);
+  } catch (error) {
+    console.error("Get Order Error:", error);
+    res.status(500).json({ error: "Error fetching order details" });
   }
 };
 
-
-module.exports = {
-  placeOrder,
-  getOrderById,
 };
-

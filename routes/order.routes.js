@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { placeOrder, getOrderById } = require('../controllers/OrderController');
-
+const { placeOrder } = require('../controllers/OrderController'); // ❌ getOrderById hata do
 
 router.post('/place', placeOrder);
-router.get('/:id', getOrderById);
-router.get('/orders/:id', getOrderById);
+
+// 🧹 HATA DO
+// router.get('/:id', getOrderById);
+// router.get('/orders/:id', getOrderById);
+
 module.exports = router;
