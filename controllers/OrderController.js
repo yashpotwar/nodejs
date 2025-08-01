@@ -20,7 +20,7 @@ exports.placeOrder = async (req, res) => {
       .input("PaymentMethod", sql.VarChar, paymentMethod || "COD")
       .input("TotalAmount", sql.Decimal(10, 2), totalAmount)
       .query(`
-        INSERT INTO Orders (UserID, Address, PaymentMethod, TotalAmount, OrderDate)
+        INSERT INTO Orders (UserID, DeliveryAddress, PaymentMethod, TotalAmount, OrderDate)
         OUTPUT INSERTED.ID
         VALUES (@UserID, @Address, @PaymentMethod, @TotalAmount, GETDATE())
       `);
