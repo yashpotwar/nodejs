@@ -4,9 +4,11 @@ const dbConfig = require("../config/db");
 exports.placeOrder = async (req, res) => {
   const { userId, address, items, paymentMethod, totalAmount } = req.body;
 
-  if (!userId || !address || !items || !items.length) {
-    return res.status(400).json({ error: "Missing required fields" });
-  }
+ if (!userId || !address || !items || !items.length) {
+  console.log("Validation failed:", { userId, address, items });
+  return res.status(400).json({ error: "Missing required fields" });
+}
+
 
   const pool = await sql.connect(dbConfig);
   const transaction = new sql.Transaction(pool);
@@ -15,15 +17,15 @@ exports.placeOrder = async (req, res) => {
     await transaction.begin();
 
     const orderInsert = await transaction.request()
-      .input("UserID", sql.Int, userId)
-      .input("DeliveryAddress", sql.VarChar, address)  // ✅ correct
-      .input("PaymentMethod", sql.VarChar, paymentMethod || "COD")
-      .input("TotalAmount", sql.Decimal(10, 2), totalAmount)
-      .query(`
-        INSERT INTO Orders (UserID, DeliveryAddress, PaymentMethod, TotalAmount, OrderDate)
-        OUTPUT INSERTED.ID
-        VALUES (@UserID, @Address, @PaymentMethod, @TotalAmount, GETDATE())
-      `);
+  .input("UserID", sql.Int, userId)
+  .input("DeliveryAddress", sql.VarChar, address)
+  .input("PaymentMethod", sql.VarChar, paymentMethod || "COD")
+  .input("TotalAmount", sql.Decimal(10, 2), totalAmount)
+  .query(`
+    INSERT INTO Orders (UserID, DeliveryAddress, PaymentMethod, TotalAmount, OrderDate)
+    OUTPUT INSERTED.ID
+    VALUES (@UserID, @DeliveryAddress, @PaymentMethod, @TotalAmount, GETDATE())
+  `);
 
     const orderId = orderInsert.recordset[0].ID;
 
@@ -52,7 +54,8 @@ exports.placeOrder = async (req, res) => {
   } catch (error) {
     await transaction.rollback();
     console.error("Order Placement Error:", error);
-    res.status(500).json({ error: "Something went wrong" });
+   res.status(500).json({ error: error.message });
+
   }
 };
 
