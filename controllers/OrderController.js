@@ -1,5 +1,4 @@
-const sql = require("mssql");
-const dbConfig = require("../config/db");
+const { sql, pool, poolConnect } = require('../config/db');
 
 exports.placeOrder = async (req, res) => {
   const { userId, address, items, paymentMethod, totalAmount } = req.body;
@@ -10,13 +9,11 @@ exports.placeOrder = async (req, res) => {
 }
 
 
-  const pool = await sql.connect(dbConfig);
-  const transaction = new sql.Transaction(pool);
+ 
 
   try {
-    await transaction.begin();
-
-    const orderInsert = await transaction.request()
+    await poolConnect;
+    const orderInsert = await pool.request()
   .input("UserID", sql.Int, userId)
   .input("DeliveryAddress", sql.VarChar, address)
   .input("PaymentMethod", sql.VarChar, paymentMethod || "COD")
@@ -30,7 +27,7 @@ exports.placeOrder = async (req, res) => {
     const orderId = orderInsert.recordset[0].ID;
 
     for (const item of items) {
-      await transaction.request()
+      await pool.request()
         .input("OrderID", sql.Int, orderId)
         .input("ProductID", sql.Int, item.productId)
         .input("VariantID", sql.Int, item.variantId)
@@ -45,14 +42,12 @@ exports.placeOrder = async (req, res) => {
     }
 
     // Clear cart
-    await transaction.request()
+    await pool.request()
       .input("UserID", sql.Int, userId)
       .query("DELETE FROM Cart WHERE UserID = @UserID");
 
-    await transaction.commit();
     res.status(200).json({ message: "Order placed successfully", orderId });
   } catch (error) {
-    await transaction.rollback();
     console.error("Order Placement Error:", error);
    res.status(500).json({ error: error.message });
 
@@ -63,7 +58,7 @@ exports.placeOrder = async (req, res) => {
 exports.getOrderById = async (req, res) => {
   const orderId = req.params.id;
   try {
-    const pool = await sql.connect(dbConfig);
+    await poolConnect;
     const result = await pool.request()
       .input("OrderID", sql.Int, orderId)
       .query(`SELECT * FROM Orders WHERE ID = @OrderID`);
