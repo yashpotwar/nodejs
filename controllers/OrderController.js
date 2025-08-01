@@ -2,9 +2,9 @@ const sql = require("mssql");
 const dbConfig = require("../config/db");
 
 exports.placeOrder = async (req, res) => {
-  const { userId, addressId, items, paymentMethod, totalAmount } = req.body;
+  const { userId, address, items, paymentMethod, totalAmount } = req.body;
 
-  if (!userId || !addressId || !items || !items.length) {
+  if (!userId || !address || !items || !items.length) {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
@@ -16,13 +16,13 @@ exports.placeOrder = async (req, res) => {
 
     const orderInsert = await transaction.request()
       .input("UserID", sql.Int, userId)
-      .input("AddressID", sql.Int, addressId)
+      .input("Address", sql.VarChar, address)
       .input("PaymentMethod", sql.VarChar, paymentMethod || "COD")
       .input("TotalAmount", sql.Decimal(10, 2), totalAmount)
       .query(`
-        INSERT INTO Orders (UserID, AddressID, PaymentMethod, TotalAmount, OrderDate)
+        INSERT INTO Orders (UserID, Address, PaymentMethod, TotalAmount, OrderDate)
         OUTPUT INSERTED.ID
-        VALUES (@UserID, @AddressID, @PaymentMethod, @TotalAmount, GETDATE())
+        VALUES (@UserID, @Address, @PaymentMethod, @TotalAmount, GETDATE())
       `);
 
     const orderId = orderInsert.recordset[0].ID;
@@ -54,21 +54,20 @@ exports.placeOrder = async (req, res) => {
     console.error("Order Placement Error:", error);
     res.status(500).json({ error: "Something went wrong" });
   }
-  exports.getOrderById = async (req, res) => {
+};
+
+// Get Order by ID
+exports.getOrderById = async (req, res) => {
   const orderId = req.params.id;
   try {
     const pool = await sql.connect(dbConfig);
     const result = await pool.request()
       .input("OrderID", sql.Int, orderId)
-      .query(`
-        SELECT * FROM Orders WHERE ID = @OrderID
-      `);
+      .query(`SELECT * FROM Orders WHERE ID = @OrderID`);
     
     res.status(200).json(result.recordset[0]);
   } catch (error) {
     console.error("Get Order Error:", error);
     res.status(500).json({ error: "Error fetching order details" });
   }
-};
-
 };
