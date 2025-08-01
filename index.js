@@ -49,6 +49,8 @@ const deletedLogsRoutes = require('./routes/deletedLogsRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const orderRoutes = require('./routes/order.routes');
 const paymentRoutes = require('./routes/paymentRoutes');
+const addressRoutes = require("./routes/address.routes");
+
 
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes); // main product routes
@@ -61,7 +63,7 @@ app.use('/api/subcategories', subCategoryRoutes);
 app.use('/api/deleted-logs', deletedLogsRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/payment', paymentRoutes);
-
+app.use("/api/address", addressRoutes);
 // ✅ Serve uploads (images)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
