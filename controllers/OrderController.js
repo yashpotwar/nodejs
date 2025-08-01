@@ -16,7 +16,7 @@ exports.placeOrder = async (req, res) => {
 
     const orderInsert = await transaction.request()
       .input("UserID", sql.Int, userId)
-      .input("Address", sql.VarChar, address)
+      .input("DeliveryAddress", sql.VarChar, address)  // ✅ correct
       .input("PaymentMethod", sql.VarChar, paymentMethod || "COD")
       .input("TotalAmount", sql.Decimal(10, 2), totalAmount)
       .query(`
