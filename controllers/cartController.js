@@ -1,10 +1,11 @@
 const { sql, pool, poolConnect } = require('../config/db');
 
 // ✅ Add to Cart (with category, subcategory, image)
-console.log("🛒 Add to Cart Request Body:", req.body);
+
 
 const addToCart = async (req, res) => {
   try {
+    
     console.log("🛒 Add to Cart Request Body:", req.body);
 
     let { userId, productId, quantity, selectedSize, selectedColor } = req.body;
