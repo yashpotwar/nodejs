@@ -15,9 +15,16 @@ const addToCart = async (req, res) => {
     productId = parseInt(productId);
     quantity = parseInt(quantity);
 
-    if (!userId || !productId || !selectedSize || !selectedColor || !quantity) {
-      return res.status(400).json({ error: "Invalid cart data" });
-    }
+    if (
+  isNaN(userId) ||
+  isNaN(productId) ||
+  isNaN(quantity) ||
+  !selectedSize ||
+  !selectedColor
+) {
+  return res.status(400).json({ error: "Invalid cart data" });
+}
+
 
     await poolConnect;
 
