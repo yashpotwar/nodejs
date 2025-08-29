@@ -5,7 +5,6 @@ const { sql, pool, poolConnect } = require('../config/db');
 
 const addToCart = async (req, res) => {
   try {
-    
     console.log("🛒 Add to Cart Request Body:", req.body);
 
     let { userId, productId, quantity, selectedSize, selectedColor } = req.body;
@@ -15,42 +14,49 @@ const addToCart = async (req, res) => {
     productId = parseInt(productId);
     quantity = parseInt(quantity);
 
+    // Validation
     if (
-  isNaN(userId) ||
-  isNaN(productId) ||
-  isNaN(quantity) ||
-  !selectedSize ||
-  !selectedColor
-) {
-  return res.status(400).json({ error: "Invalid cart data" });
-}
-
+      isNaN(userId) ||
+      isNaN(productId) ||
+      isNaN(quantity) ||
+      !selectedSize ||
+      !selectedColor
+    ) {
+      return res.status(400).json({ error: "Invalid cart data" });
+    }
 
     await poolConnect;
 
-    // Fetch product
+    // Fetch product info
     const productResult = await pool.request()
       .input("productId", sql.Int, productId)
-      .query(`SELECT p.Name, p.Price, p.ImagePath,
-                     c.Name AS CategoryName,
-                     s.Name AS SubCategoryName
-              FROM Products p
-              LEFT JOIN Categories c ON p.CategoryID = c.ID
-              LEFT JOIN SubCategories s ON p.SubCategoryID = s.ID
-              WHERE p.ID = @productId`);
+      .query(`
+        SELECT p.Name, p.Price, p.ImagePath,
+               c.Name AS CategoryName,
+               s.Name AS SubCategoryName
+        FROM Products p
+        LEFT JOIN Categories c ON p.CategoryID = c.ID
+        LEFT JOIN SubCategories s ON p.SubCategoryID = s.ID
+        WHERE p.ID = @productId
+      `);
 
     const product = productResult.recordset[0];
-    if (!product) return res.status(404).json({ error: 'Product not found' });
+    if (!product) return res.status(404).json({ error: "Product not found" });
 
-    // Check if already in cart
-    const check = await pool.request()
+    // Check if item already in cart
+    const existing = await pool.request()
       .input("userId", sql.Int, userId)
       .input("productId", sql.Int, productId)
       .input("size", sql.VarChar, selectedSize)
       .input("color", sql.VarChar, selectedColor)
-      .query(`SELECT * FROM Cart WHERE userId = @userId AND productId = @productId AND size = @size AND color = @color`);
+      .query(`
+        SELECT * FROM Cart
+        WHERE userId = @userId AND productId = @productId AND size = @size AND color = @color
+      `);
 
-    if (check.recordset.length > 0) {
+    const now = new Date();
+
+    if (existing.recordset.length > 0) {
       // Update quantity
       await pool.request()
         .input("userId", sql.Int, userId)
@@ -58,28 +64,36 @@ const addToCart = async (req, res) => {
         .input("size", sql.VarChar, selectedSize)
         .input("color", sql.VarChar, selectedColor)
         .input("quantity", sql.Int, quantity)
-        .query(`UPDATE Cart SET quantity = quantity + @quantity 
-                WHERE userId = @userId AND productId = @productId AND size = @size AND color = @color`);
+        .query(`
+          UPDATE Cart 
+          SET quantity = quantity + @quantity, addedAt = GETDATE()
+          WHERE userId = @userId AND productId = @productId AND size = @size AND color = @color
+        `);
     } else {
-      // Insert new
+      // Insert new item
       await pool.request()
         .input("userId", sql.Int, userId)
         .input("productId", sql.Int, productId)
         .input("quantity", sql.Int, quantity)
         .input("size", sql.VarChar, selectedSize)
         .input("color", sql.VarChar, selectedColor)
-        .input("categoryName", sql.VarChar, product.CategoryName || '')
-        .input("subCategoryName", sql.VarChar, product.SubCategoryName || 'Uncategorized')
-        .input("imagePath", sql.VarChar, product.ImagePath || '')
-        .query(`INSERT INTO Cart (userId, productId, quantity, size, color, categoryName, subCategoryName, imagePath)
-                VALUES (@userId, @productId, @quantity, @size, @color, @categoryName, @subCategoryName, @imagePath)`);
+        .input("categoryName", sql.VarChar, product.CategoryName || "")
+        .input("subCategoryName", sql.VarChar, product.SubCategoryName || "Uncategorized")
+        .input("imagePath", sql.VarChar, product.ImagePath || "")
+        .input("addedAt", sql.DateTime, now)
+        .query(`
+          INSERT INTO Cart 
+          (userId, productId, quantity, addedAt, categoryName, subCategoryName, imagePath, size, color)
+          VALUES 
+          (@userId, @productId, @quantity, @addedAt, @categoryName, @subCategoryName, @imagePath, @size, @color)
+        `);
     }
 
-    res.json({ message: 'Item added to cart' });
+    res.json({ message: "Item added to cart" });
 
   } catch (err) {
-    console.error('❌ Add to cart error:', err);
-    res.status(500).json({ error: 'Failed to add to cart' });
+    console.error("❌ Add to cart error:", err);
+    res.status(500).json({ error: "Failed to add to cart" });
   }
 };
 
