@@ -9,12 +9,10 @@ const addToCart = async (req, res) => {
 
     let { userId, productId, quantity, selectedSize, selectedColor } = req.body;
 
-    // Convert to integers
     userId = parseInt(userId);
     productId = parseInt(productId);
     quantity = parseInt(quantity);
 
-    // Validation
     if (
       isNaN(userId) ||
       isNaN(productId) ||
@@ -27,11 +25,12 @@ const addToCart = async (req, res) => {
 
     await poolConnect;
 
-    // Fetch product info
+    // ✅ Fetch product info (with price, name, discount, imagePath)
     const productResult = await pool.request()
       .input("productId", sql.Int, productId)
       .query(`
         SELECT p.Name, p.Price, p.ImagePath,
+               p.Discount,
                c.Name AS CategoryName,
                s.Name AS SubCategoryName
         FROM Products p
@@ -43,7 +42,9 @@ const addToCart = async (req, res) => {
     const product = productResult.recordset[0];
     if (!product) return res.status(404).json({ error: "Product not found" });
 
-    // Check if item already in cart
+    const now = new Date();
+
+    // ✅ Check if already exists
     const existing = await pool.request()
       .input("userId", sql.Int, userId)
       .input("productId", sql.Int, productId)
@@ -54,10 +55,8 @@ const addToCart = async (req, res) => {
         WHERE userId = @userId AND productId = @productId AND size = @size AND color = @color
       `);
 
-    const now = new Date();
-
     if (existing.recordset.length > 0) {
-      // Update quantity
+      // ✅ Update quantity
       await pool.request()
         .input("userId", sql.Int, userId)
         .input("productId", sql.Int, productId)
@@ -70,7 +69,7 @@ const addToCart = async (req, res) => {
           WHERE userId = @userId AND productId = @productId AND size = @size AND color = @color
         `);
     } else {
-      // Insert new item
+      // ✅ Insert with all required details
       await pool.request()
         .input("userId", sql.Int, userId)
         .input("productId", sql.Int, productId)
@@ -80,12 +79,16 @@ const addToCart = async (req, res) => {
         .input("categoryName", sql.VarChar, product.CategoryName || "")
         .input("subCategoryName", sql.VarChar, product.SubCategoryName || "Uncategorized")
         .input("imagePath", sql.VarChar, product.ImagePath || "")
+        .input("productName", sql.VarChar, product.Name || "")
+        .input("price", sql.Decimal(18,2), product.Price || 0)
+        .input("originalPrice", sql.Decimal(18,2), product.Price || 0)
+        .input("discount", sql.Int, product.Discount || 0)
         .input("addedAt", sql.DateTime, now)
         .query(`
           INSERT INTO Cart 
-          (userId, productId, quantity, addedAt, categoryName, subCategoryName, imagePath, size, color)
+          (userId, productId, quantity, addedAt, categoryName, subCategoryName, imagePath, size, color, productName, price, originalPrice, discount)
           VALUES 
-          (@userId, @productId, @quantity, @addedAt, @categoryName, @subCategoryName, @imagePath, @size, @color)
+          (@userId, @productId, @quantity, @addedAt, @categoryName, @subCategoryName, @imagePath, @size, @color, @productName, @price, @originalPrice, @discount)
         `);
     }
 
@@ -96,6 +99,7 @@ const addToCart = async (req, res) => {
     res.status(500).json({ error: "Failed to add to cart" });
   }
 };
+
 
 
 // ✅ Get Cart Items
