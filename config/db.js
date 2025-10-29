@@ -1,15 +1,16 @@
 const sql = require('mssql');
+require('dotenv').config();
 
 const config = {
-  user: 'Ecommerce_DB', // 🔁 Your SQL login username
-  password: 'Ecommerceha34@3jn', // 🔁 Your SQL login password
-  server: 'N1NWPLSK12SQL-v01.shr.prod.ams1.secureserver.net', // 🔁 eg: 192.168.1.100 or sql.yourdomain.com
-  database: 'Ecommerce_DB',
-  port: 1433,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  server: process.env.DB_SERVER,
+  database: process.env.DB_NAME,
+  port: parseInt(process.env.DB_PORT, 10),
   options: {
-    encrypt: false, // 🔁 false if self-signed cert
-    trustServerCertificate: true
-  }
+    encrypt: process.env.DB_ENCRYPT === 'true',
+    trustServerCertificate: process.env.DB_TRUST_CERT === 'true',
+  },
 };
 
 const pool = new sql.ConnectionPool(config);

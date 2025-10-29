@@ -54,7 +54,7 @@ const addressRoutes = require("./routes/address.routes");
 
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes); // main product routes
-app.use('/api/products', reviewRoutes);  // review routes
+app.use('/api/reviews', reviewRoutes);  // review routes
 app.use('/api/reports', reportRoutes);
 app.use('/api/dashboard-metrics', dashboardRoutes);
 app.use('/api/cart', cartRoutes);

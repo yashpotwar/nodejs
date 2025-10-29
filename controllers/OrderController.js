@@ -8,9 +8,6 @@ exports.placeOrder = async (req, res) => {
   return res.status(400).json({ error: "Missing required fields" });
 }
 
-
- 
-
   try {
     await poolConnect;
     const orderInsert = await pool.request()
