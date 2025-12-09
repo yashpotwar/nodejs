@@ -335,27 +335,42 @@ const getProductFullDetails = async (req, res) => {
   }
 };
 
-// 🔹 Get related products (same subcategory)
+// 🔹 Get related products (same subcategory or category)
 const getRelatedProducts = async (req, res) => {
   const { id } = req.params;
   try {
     await poolConnect;
 
-    const subCatResult = await pool.request()
+    const productResult = await pool.request()
       .input('id', sql.Int, id)
-      .query('SELECT SubCategoryID FROM Products WHERE ID = @id');
+      .query('SELECT SubCategoryID, CategoryID FROM Products WHERE ID = @id');
 
-    const subCategoryID = subCatResult.recordset[0]?.SubCategoryID;
-    if (!subCategoryID) return res.status(404).json({ message: 'SubCategory not found' });
+    const product = productResult.recordset[0];
+    if (!product) return res.status(404).json({ message: 'Product not found' });
 
-    const relatedResult = await pool.request()
-      .input('subCatId', sql.Int, subCategoryID)
-      .input('currentId', sql.Int, id)
-      .query(`
-        SELECT TOP 10 ID, Name, Price, Discount, Rating, ImagePath
-        FROM Products 
-        WHERE SubCategoryID = @subCatId AND ID != @currentId
-      `);
+    let relatedResult;
+
+    // If product has a subcategory, get related products from same subcategory
+    if (product.SubCategoryID) {
+      relatedResult = await pool.request()
+        .input('subCatId', sql.Int, product.SubCategoryID)
+        .input('currentId', sql.Int, id)
+        .query(`
+          SELECT TOP 10 ID, Name, Price, Discount, Rating, ImagePath
+          FROM Products 
+          WHERE SubCategoryID = @subCatId AND ID != @currentId
+        `);
+    } else {
+      // Otherwise, get related products from same category
+      relatedResult = await pool.request()
+        .input('catId', sql.Int, product.CategoryID)
+        .input('currentId', sql.Int, id)
+        .query(`
+          SELECT TOP 10 ID, Name, Price, Discount, Rating, ImagePath
+          FROM Products 
+          WHERE CategoryID = @catId AND ID != @currentId
+        `);
+    }
 
     res.json(relatedResult.recordset);
   } catch (err) {
