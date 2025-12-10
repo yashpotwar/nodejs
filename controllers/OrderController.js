@@ -51,6 +51,22 @@ exports.placeOrder = async (req, res) => {
   }
 };
 
+// Get Orders by User ID
+exports.getOrdersByUserId = async (req, res) => {
+  const userId = req.params.userId;
+  try {
+    await poolConnect;
+    const result = await pool.request()
+      .input("UserID", sql.Int, userId)
+      .query(`SELECT ID, UserID, DeliveryAddress, PaymentMethod, TotalAmount, OrderDate, Status FROM Orders WHERE UserID = @UserID ORDER BY OrderDate DESC`);
+    
+    res.status(200).json(result.recordset);
+  } catch (error) {
+    console.error("Get Orders Error:", error);
+    res.status(500).json({ error: "Error fetching orders" });
+  }
+};
+
 // Get Order by ID
 exports.getOrderById = async (req, res) => {
   const orderId = req.params.id;
