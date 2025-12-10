@@ -56,11 +56,33 @@ exports.getOrderById = async (req, res) => {
   const orderId = req.params.id;
   try {
     await poolConnect;
-    const result = await pool.request()
+    
+    // Fetch order details
+    const orderResult = await pool.request()
       .input("OrderID", sql.Int, orderId)
       .query(`SELECT * FROM Orders WHERE ID = @OrderID`);
     
-    res.status(200).json(result.recordset[0]);
+    if (!orderResult.recordset.length) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+    
+    const order = orderResult.recordset[0];
+    
+    // Fetch order items
+    const itemsResult = await pool.request()
+      .input("OrderID", sql.Int, orderId)
+      .query(`
+        SELECT oi.ID, oi.ProductID, oi.Quantity, oi.Price, oi.Size, oi.Color,
+               p.Name as ProductName, p.ImagePath
+        FROM OrderItems oi
+        JOIN Products p ON oi.ProductID = p.ID
+        WHERE oi.OrderID = @OrderID
+      `);
+    
+    res.status(200).json({
+      ...order,
+      Items: itemsResult.recordset
+    });
   } catch (error) {
     console.error("Get Order Error:", error);
     res.status(500).json({ error: "Error fetching order details" });
