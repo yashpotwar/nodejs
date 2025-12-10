@@ -58,12 +58,22 @@ exports.getOrdersByUserId = async (req, res) => {
     await poolConnect;
     const result = await pool.request()
       .input("UserID", sql.Int, userId)
-      .query(`SELECT ID, UserID, DeliveryAddress, PaymentMethod, TotalAmount, OrderDate, Status FROM Orders WHERE UserID = @UserID ORDER BY OrderDate DESC`);
+      .query(`
+        SELECT ID, UserID, DeliveryAddress, PaymentMethod, TotalAmount, OrderDate,
+               ISNULL(Status, 'Pending') as Status
+        FROM Orders 
+        WHERE UserID = @UserID 
+        ORDER BY OrderDate DESC
+      `);
+    
+    if (!result.recordset) {
+      return res.status(200).json([]);
+    }
     
     res.status(200).json(result.recordset);
   } catch (error) {
     console.error("Get Orders Error:", error);
-    res.status(500).json({ error: "Error fetching orders" });
+    res.status(500).json({ error: "Error fetching orders: " + error.message });
   }
 };
 
@@ -76,7 +86,12 @@ exports.getOrderById = async (req, res) => {
     // Fetch order details
     const orderResult = await pool.request()
       .input("OrderID", sql.Int, orderId)
-      .query(`SELECT * FROM Orders WHERE ID = @OrderID`);
+      .query(`
+        SELECT ID, UserID, DeliveryAddress, PaymentMethod, TotalAmount, OrderDate,
+               ISNULL(Status, 'Pending') as Status
+        FROM Orders 
+        WHERE ID = @OrderID
+      `);
     
     if (!orderResult.recordset.length) {
       return res.status(404).json({ error: "Order not found" });
@@ -85,22 +100,28 @@ exports.getOrderById = async (req, res) => {
     const order = orderResult.recordset[0];
     
     // Fetch order items
-    const itemsResult = await pool.request()
-      .input("OrderID", sql.Int, orderId)
-      .query(`
-        SELECT oi.ID, oi.ProductID, oi.Quantity, oi.Price, oi.Size, oi.Color,
-               p.Name as ProductName, p.ImagePath
-        FROM OrderItems oi
-        JOIN Products p ON oi.ProductID = p.ID
-        WHERE oi.OrderID = @OrderID
-      `);
+    let items = [];
+    try {
+      const itemsResult = await pool.request()
+        .input("OrderID", sql.Int, orderId)
+        .query(`
+          SELECT oi.ID, oi.ProductID, oi.Quantity, oi.Price, oi.Size, oi.Color,
+                 p.Name as ProductName, p.ImagePath
+          FROM OrderItems oi
+          JOIN Products p ON oi.ProductID = p.ID
+          WHERE oi.OrderID = @OrderID
+        `);
+      items = itemsResult.recordset || [];
+    } catch (itemError) {
+      console.warn("Error fetching order items:", itemError);
+    }
     
     res.status(200).json({
       ...order,
-      Items: itemsResult.recordset
+      Items: items
     });
   } catch (error) {
     console.error("Get Order Error:", error);
-    res.status(500).json({ error: "Error fetching order details" });
+    res.status(500).json({ error: "Error fetching order details: " + error.message });
   }
 };
